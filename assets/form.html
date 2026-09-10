@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Link chip</title>
+<style>
+  :root {
+    --bg: #17151a; --surface: #232027; --fg: #f3f2f4; --muted: #a8a4ad;
+    --border: #3a3640; --primary: #e8b7a0; --primaryFg: #1b1520;
+    --input: #2c2933; --ring: #e8b7a0; --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--fg); background: var(--surface);
+  }
+  .card {
+    width: 100%; max-width: 640px; margin: 0 auto; padding: 20px 22px 22px;
+  }
+  h1 { font-size: 18px; font-weight: 700; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+  label { display: block; font-size: 11px; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); margin: 13px 0 5px; }
+  label .hint { text-transform: none; letter-spacing: 0; opacity: .7; }
+  input[type=text] {
+    width: 100%; padding: 9px 11px; background: var(--input);
+    border: 1px solid var(--border); border-radius: 10px; color: var(--fg);
+    font-size: 13px; outline: none;
+  }
+  input[type=text]:focus { border-color: var(--ring); }
+  .seg { display: flex; gap: 6px; }
+  .seg button {
+    flex: 1; padding: 8px 6px; border: 1px solid var(--border); background: var(--input);
+    color: var(--fg); border-radius: 9px; font-size: 12px; cursor: pointer;
+  }
+  .seg button.on { border-color: var(--primary); color: var(--primary); }
+  .colors { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sw { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+  .sw.on { border-color: var(--fg); }
+  input[type=color] { width: 30px; height: 26px; border: 1px solid var(--border); border-radius: 6px; background: none; padding: 0; cursor: pointer; }
+  .preview {
+    margin: 16px 0 4px; padding: 20px; border: 1px dashed var(--border);
+    border-radius: 12px; display: flex; justify-content: center;
+    background: linear-gradient(135deg, #2a2730 0 50%, #33303a 50% 100%);
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 9px 13px;
+    border-radius: 10px; border: 1px solid rgba(255,255,255,.09); max-width: 100%;
+  }
+  .chip #chipicon { display: inline-flex; }
+  .chip #chipicon svg { display: block; }
+  .chip .txt { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .actions { display: flex; gap: 8px; margin-top: 14px; }
+  .actions button { flex: 1; padding: 10px; border-radius: 10px; font-size: 13px; cursor: pointer; border: 1px solid var(--border); background: var(--input); color: var(--fg); }
+  .actions .primary { background: var(--primary); color: var(--primaryFg); border-color: var(--primary); font-weight: 650; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="title">Add link chip</h1>
+    <p class="sub">A clickable sticker that opens a link.</p>
+
+    <label>Link URL</label>
+    <input id="url" type="text" placeholder="https://github.com/owner/repo" autocomplete="off" spellcheck="false" />
+
+    <label>Label <span class="hint">(auto from URL)</span></label>
+    <input id="label" type="text" placeholder="owner/repo" autocomplete="off" spellcheck="false" />
+
+    <label>Icon</label>
+    <div class="seg" id="iconseg">
+      <button type="button" data-icon="github">GitHub</button>
+      <button type="button" data-icon="globe">Globe</button>
+      <button type="button" data-icon="none">None</button>
+    </div>
+
+    <label>Icon &amp; text color</label>
+    <div class="colors" id="fgcolors"></div>
+
+    <label>Background color</label>
+    <div class="colors" id="bgcolors"></div>
+
+    <div class="preview"><div class="chip" id="chip"><span id="chipicon"></span><span class="txt" id="chiptxt">owner/repo</span></div></div>
+
+    <div class="actions">
+      <button type="button" id="cancel">Cancel</button>
+      <button type="button" id="add" class="primary">Add to canvas</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var api = null;
+  try { api = acquireDrawdyApi(); } catch (e) {}
+
+  var FG_SWATCHES = ["#e8b7a0", "#ffffff", "#f3f2f4", "#7ee787", "#79c0ff", "#ff7b72", "#d2a8ff", "#f2cc60"];
+  var BG_SWATCHES = ["transparent", "#1f1a17", "#24292e", "#0d1117", "#161b22", "#2c2933", "#3b0764", "#052e16", "#7f1d1d"];
+
+  var state = { mode: "create", editId: null, url: "", label: "", labelEdited: false, iconKind: "github", fg: "#e8b7a0", bg: "#1f1a17" };
+  var tpl = { github: "", globe: "" };
+
+  function $(id) { return document.getElementById(id); }
+
+  function deriveLabel(u) {
+    var s = String(u || "").trim().replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+    s = s.replace(/^www\./i, "").replace(/\/+$/, "");
+    var g = s.replace(/^github\.com\//i, "");
+    return g || s;
+  }
+  function recolor(svg, color) { return String(svg || "").split("__FG__").join(color); }
+
+  function renderPreview() {
+    var chip = $("chip"), txt = $("chiptxt"), icon = $("chipicon");
+    chip.style.background = state.bg;
+    txt.style.color = state.fg;
+    txt.textContent = state.label || deriveLabel(state.url) || "owner/repo";
+    if (state.iconKind === "none") { icon.innerHTML = ""; icon.style.display = "none"; }
+    else { icon.style.display = "inline-flex"; icon.innerHTML = recolor(tpl[state.iconKind] || "", state.fg); }
+  }
+
+  function buildSwatches(hostId, list, key) {
+    var host = $(hostId); if (!host) return; host.innerHTML = "";
+    list.forEach(function (c) {
+      var b = document.createElement("div");
+      b.className = "sw"; b.title = c; b.setAttribute("data-c", c);
+      if (c === "transparent") {
+        b.title = "Transparent";
+        b.style.backgroundColor = "#fff";
+        b.style.backgroundImage = "linear-gradient(45deg,#9aa 25%,transparent 25%),linear-gradient(-45deg,#9aa 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#9aa 75%),linear-gradient(-45deg,transparent 75%,#9aa 75%)";
+        b.style.backgroundSize = "8px 8px";
+        b.style.backgroundPosition = "0 0,0 4px,4px -4px,-4px 0";
+      } else {
+        b.style.background = c;
+      }
+      b.onclick = function () { state[key] = c; syncColorUI(); renderPreview(); };
+      host.appendChild(b);
+    });
+    var input = document.createElement("input");
+    input.type = "color"; input.value = /^#[0-9a-f]{6}$/i.test(state[key]) ? state[key] : "#000000";
+    input.oninput = function () { state[key] = input.value; syncColorUI(); renderPreview(); };
+    host.appendChild(input);
+  }
+  function syncColorUI() {
+    [["fgcolors", "fg"], ["bgcolors", "bg"]].forEach(function (pair) {
+      var host = $(pair[0]); if (!host) return; var key = pair[1];
+      Array.prototype.forEach.call(host.querySelectorAll(".sw"), function (sw) {
+        var on = sw.getAttribute("data-c").toLowerCase() === String(state[key]).toLowerCase();
+        sw.className = "sw" + (on ? " on" : "");
+      });
+    });
+  }
+  function syncIconUI() {
+    Array.prototype.forEach.call(document.querySelectorAll("#iconseg button"), function (b) {
+      b.className = b.getAttribute("data-icon") === state.iconKind ? "on" : "";
+    });
+  }
+
+  $("url").addEventListener("input", function (e) {
+    state.url = e.target.value;
+    if (!state.labelEdited) { var d = deriveLabel(state.url); $("label").value = d; state.label = d; }
+    renderPreview();
+  });
+  $("label").addEventListener("input", function (e) { state.label = e.target.value; state.labelEdited = true; renderPreview(); });
+  $("iconseg").addEventListener("click", function (e) {
+    var b = e.target.closest ? e.target.closest("button") : null; if (!b) return;
+    state.iconKind = b.getAttribute("data-icon"); syncIconUI(); renderPreview();
+  });
+  $("cancel").onclick = function () { if (api) api.postMessage({ kind: "cancel" }); };
+  $("add").onclick = function () {
+    if (!state.url.trim()) { $("url").focus(); return; }
+    if (api) api.postMessage({
+      kind: "submit", mode: state.mode, editId: state.editId,
+      url: state.url, label: state.label || deriveLabel(state.url),
+      iconKind: state.iconKind, fg: state.fg, bg: state.bg
+    });
+  };
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && (e.target.id === "url" || e.target.id === "label")) $("add").click();
+    if (e.key === "Escape") $("cancel").click();
+  });
+
+  function applyStyling(s) {
+    if (!s) return; var r = document.documentElement.style;
+    var map = { background: "--bg", surface: "--surface", foreground: "--fg", mutedForeground: "--muted", border: "--border", primary: "--primary", primaryForeground: "--primaryFg", input: "--input", ring: "--ring", radiusMd: "--radius" };
+    Object.keys(map).forEach(function (k) { if (s[k]) r.setProperty(map[k], s[k]); });
+  }
+
+  function init(msg) {
+    state.mode = msg.mode || "create";
+    state.editId = msg.editId || null;
+    tpl.github = (msg.iconTemplates && msg.iconTemplates.github) || "";
+    tpl.globe = (msg.iconTemplates && msg.iconTemplates.globe) || "";
+    applyStyling(msg.styling);
+    var TITLES = { edit: "Edit link chip", linkify: "Make this link a chip", create: "Add link chip" };
+    var BTNS = { edit: "Save changes", linkify: "Replace with chip", create: "Add to canvas" };
+    $("title").textContent = TITLES[state.mode] || TITLES.create;
+    $("add").textContent = BTNS[state.mode] || BTNS.create;
+    var p = msg.prefill || {};
+    state.url = p.url || ""; state.label = p.label || ""; state.labelEdited = !!p.label;
+    state.iconKind = p.iconKind || "github"; state.fg = p.fg || "#e8b7a0"; state.bg = p.bg || "#1f1a17";
+    $("url").value = state.url; $("label").value = state.label || deriveLabel(state.url);
+    buildSwatches("fgcolors", FG_SWATCHES, "fg");
+    buildSwatches("bgcolors", BG_SWATCHES, "bg");
+    syncIconUI(); syncColorUI(); renderPreview();
+    setTimeout(function () { try { $("url").focus(); } catch (e) {} }, 30);
+  }
+
+  // default render so the form is usable even before init arrives
+  buildSwatches("fgcolors", FG_SWATCHES, "fg");
+  buildSwatches("bgcolors", BG_SWATCHES, "bg");
+  syncIconUI(); syncColorUI(); renderPreview();
+
+  if (api) {
+    api.onMessage(function (msg) { if (msg && msg.kind === "init") init(msg); });
+    api.postMessage({ kind: "ready" });
+  }
+})();
+</script>
+</body>
+</html>
