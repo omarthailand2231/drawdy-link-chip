@@ -1,0 +1,26 @@
+{
+    "name": "drawdy-link-chip",
+    "version": "0.1.0",
+    "description": "Drawdy extension: clickable link-chip stickers.",
+    "license": "UNLICENSED",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "gen": "node scripts/gen-assets.mjs",
+        "predev": "node scripts/gen-assets.mjs",
+        "dev": "vite",
+        "prebuild": "node scripts/gen-assets.mjs",
+        "build": "node build.ts",
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/node": "^20",
+        "typescript": "^5",
+        "vite": "^8.2.1",
+        "@drawdy/driver-protocol": "latest",
+        "@rollup/plugin-typescript": "^12.1.2",
+        "fflate": "^0.8.2",
+        "rollup": "^4.34.0",
+        "tslib": "^2.8.1"
+    }
+}

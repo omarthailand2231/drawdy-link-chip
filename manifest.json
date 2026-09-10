@@ -1,0 +1,8 @@
+{
+    "driverId": "drawdy.link-chip",
+    "driverName": "Link Chips",
+    "driverVersion": "0.1.0",
+    "description": "Clickable link-chip stickers — a logo + a clean label in colors you pick — that open a URL.",
+    "main": "main.js",
+    "permissions": ["dom", "scene", "storage"]
+}
