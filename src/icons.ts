@@ -32,3 +32,11 @@ export function iconSvg(kind: IconKind, color: string, size = 18): string | null
     if (kind === "globe") return globeSvg(color, size);
     return null;
 }
+
+// WIP: more built-in marks. Not yet wired into IconKind/iconSvg.
+export function npmSvg(color: string, size = 18): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}"><path d="M2 4h20v14H12v2H8v-2H2V4zm2 2v10h4v-8h3v8h2V6H4zm12 0v8h2V8h2v6h2V6h-6z"/></svg>`;
+}
+export function xSvg(color: string, size = 18): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}"><path d="M18.9 2H22l-7.3 8.3L23 22h-6.8l-5-6.6L5.4 22H2.3l7.8-8.9L1.5 2h6.9l4.5 6 5.9-6zm-1.2 18h1.9L7 4H5l12.7 16z"/></svg>`;
+}
