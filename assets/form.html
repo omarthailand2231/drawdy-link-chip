@@ -45,8 +45,7 @@
     background: linear-gradient(135deg, #2a2730 0 50%, #33303a 50% 100%);
   }
   .chip {
-    display: inline-flex; align-items: center; gap: 8px; padding: 9px 13px;
-    border-radius: 10px; border: 1px solid rgba(255,255,255,.09); max-width: 100%;
+    display: inline-flex; align-items: center; gap: 8px; max-width: 100%;
   }
   .chip #chipicon { display: inline-flex; }
   .chip #chipicon svg { display: block; }
@@ -74,11 +73,8 @@
       <button type="button" data-icon="none">None</button>
     </div>
 
-    <label>Icon &amp; text color</label>
+    <label>Text &amp; icon color</label>
     <div class="colors" id="fgcolors"></div>
-
-    <label>Background color</label>
-    <div class="colors" id="bgcolors"></div>
 
     <div class="preview"><div class="chip" id="chip"><span id="chipicon"></span><span class="txt" id="chiptxt">owner/repo</span></div></div>
 
@@ -94,9 +90,8 @@
   try { api = acquireDrawdyApi(); } catch (e) {}
 
   var FG_SWATCHES = ["#e8b7a0", "#ffffff", "#f3f2f4", "#7ee787", "#79c0ff", "#ff7b72", "#d2a8ff", "#f2cc60"];
-  var BG_SWATCHES = ["transparent", "#1f1a17", "#24292e", "#0d1117", "#161b22", "#2c2933", "#3b0764", "#052e16", "#7f1d1d"];
 
-  var state = { mode: "create", editId: null, url: "", label: "", labelEdited: false, iconKind: "github", fg: "#e8b7a0", bg: "#1f1a17" };
+  var state = { mode: "create", editId: null, url: "", label: "", labelEdited: false, iconKind: "github", fg: "#e8b7a0" };
   var tpl = { github: "", globe: "" };
 
   function $(id) { return document.getElementById(id); }
@@ -110,8 +105,7 @@
   function recolor(svg, color) { return String(svg || "").split("__FG__").join(color); }
 
   function renderPreview() {
-    var chip = $("chip"), txt = $("chiptxt"), icon = $("chipicon");
-    chip.style.background = state.bg;
+    var txt = $("chiptxt"), icon = $("chipicon");
     txt.style.color = state.fg;
     txt.textContent = state.label || deriveLabel(state.url) || "owner/repo";
     if (state.iconKind === "none") { icon.innerHTML = ""; icon.style.display = "none"; }
@@ -141,7 +135,7 @@
     host.appendChild(input);
   }
   function syncColorUI() {
-    [["fgcolors", "fg"], ["bgcolors", "bg"]].forEach(function (pair) {
+    [["fgcolors", "fg"]].forEach(function (pair) {
       var host = $(pair[0]); if (!host) return; var key = pair[1];
       Array.prototype.forEach.call(host.querySelectorAll(".sw"), function (sw) {
         var on = sw.getAttribute("data-c").toLowerCase() === String(state[key]).toLowerCase();
@@ -171,7 +165,7 @@
     if (api) api.postMessage({
       kind: "submit", mode: state.mode, editId: state.editId,
       url: state.url, label: state.label || deriveLabel(state.url),
-      iconKind: state.iconKind, fg: state.fg, bg: state.bg
+      iconKind: state.iconKind, fg: state.fg
     });
   };
   document.addEventListener("keydown", function (e) {
@@ -199,17 +193,15 @@
     $("add").textContent = BTNS[state.mode] || BTNS.create;
     var p = msg.prefill || {};
     state.url = p.url || ""; state.label = p.label || ""; state.labelEdited = !!p.label;
-    state.iconKind = p.iconKind || "github"; state.fg = p.fg || "#e8b7a0"; state.bg = p.bg || "#1f1a17";
+    state.iconKind = p.iconKind || "github"; state.fg = p.fg || "#e8b7a0";
     $("url").value = state.url; $("label").value = state.label || deriveLabel(state.url);
     buildSwatches("fgcolors", FG_SWATCHES, "fg");
-    buildSwatches("bgcolors", BG_SWATCHES, "bg");
     syncIconUI(); syncColorUI(); renderPreview();
     setTimeout(function () { try { $("url").focus(); } catch (e) {} }, 30);
   }
 
   // default render so the form is usable even before init arrives
   buildSwatches("fgcolors", FG_SWATCHES, "fg");
-  buildSwatches("bgcolors", BG_SWATCHES, "bg");
   syncIconUI(); syncColorUI(); renderPreview();
 
   if (api) {

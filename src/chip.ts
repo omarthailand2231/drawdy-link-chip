@@ -1,15 +1,15 @@
-// Builds the on-canvas chip. A chip is a `component` scene element: a live
-// DomElementSchema (icon + label in a rounded row) that pans and zooms with the
-// board. Its URL and style live in `meta` so a chip is fully self-describing —
-// any session can read a click target's meta and know where it points.
+// Builds the on-canvas chip as a SINGLE native `image` element: the logo and
+// the label are baked into one SVG. This renders for everyone — no extension
+// needed to display it — and is one element, so there's nothing to group.
+//
+// Only the URL + style live in the element's `meta`, so the extension (when
+// present) can read a clicked chip's meta and open it. Without the extension the
+// chip still shows; it just isn't clickable — Drawdy's protocol exposes no native
+// link, so a driver can't make it natively openable.
 
-import type {
-    Dimension,
-    DomElementSchema,
-    DrawdyElementSchema,
-} from "@drawdy/driver-protocol";
-import { iconSvg, svgDataUri, type IconKind } from "./icons";
-import { chipMetrics, shade } from "./util";
+import type { DrawdyElementSchema } from "@drawdy/driver-protocol";
+import { iconNested, svgDataUri, type IconKind } from "./icons";
+import { escapeXml } from "./util";
 
 export interface ChipConfig {
     /** Full, scheme-qualified URL to open. */
@@ -17,104 +17,79 @@ export interface ChipConfig {
     /** Clean display label (see deriveLabel). */
     label: string;
     iconKind: IconKind;
-    /** Icon + text color (the accent). */
+    /** Icon + text color (the one accent). */
     fg: string;
-    /** Pill background color. */
-    bg: string;
     fontSize?: number;
 }
 
 /** Marker written into a chip's `meta` so clicks can be recognized as ours. */
 export const CHIP_FLAG = "linkChip";
 
-const px = (n: number): Dimension => [n, "px"];
-const pct = (n: number): Dimension => [n, "%"];
+const FONT =
+    "ui-sans-serif,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
-function chipSchema(cfg: ChipConfig): DomElementSchema {
+/** The composite SVG (logo + label) and its intrinsic size in canvas units. */
+export function buildChipSvg(cfg: ChipConfig): {
+    svg: string;
+    width: number;
+    height: number;
+} {
+    const fontSize = cfg.fontSize ?? 16;
     const hasIcon = cfg.iconKind !== "none";
-    const m = chipMetrics(cfg.label, hasIcon, cfg.fontSize ?? 16);
-    const children: DomElementSchema[] = [];
+    const iconSize = Math.round(fontSize * 1.15);
+    const gap = hasIcon ? Math.round(fontSize * 0.5) : 0;
+    const height = Math.round(fontSize * 1.5);
+    // The worker can't measure text; over-estimate width so the label never
+    // clips (extra width is just transparent space on a bg-less chip).
+    const textWidth = Math.ceil(cfg.label.length * fontSize * 0.62) + 8;
+    const iconChunk = hasIcon ? iconSize + gap : 0;
+    const width = iconChunk + textWidth;
 
-    const svg = iconSvg(cfg.iconKind, cfg.fg, m.iconSize);
-    if (svg) {
-        children.push({
-            type: "image",
-            domId: "chip-icon",
-            child: svgDataUri(svg), // data URI: raw SVG string won't load as an <img>
+    const icon = hasIcon
+        ? iconNested(
+              cfg.iconKind,
+              cfg.fg,
+              0,
+              Math.round((height - iconSize) / 2),
+              iconSize
+          )
+        : "";
+    const text =
+        `<text x="${iconChunk}" y="${height / 2}" dominant-baseline="central" ` +
+        `font-family="${FONT}" font-size="${fontSize}" font-weight="600" ` +
+        `fill="${cfg.fg}">${escapeXml(cfg.label)}</text>`;
 
-            styles: {
-                width: px(m.iconSize),
-                height: px(m.iconSize),
-                pointerEvents: "none", // let clicks fall through to the chip
-            },
-        });
-    }
-    children.push({
-        type: "text",
-        domId: "chip-label",
-        child: cfg.label,
-        styles: {
-            color: cfg.fg,
-            fontSize: px(m.fontSize),
-            fontWeight: "semibold",
-            pointerEvents: "none",
-        },
-    });
+    const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" ` +
+        `viewBox="0 0 ${width} ${height}">${icon}${text}</svg>`;
 
-    const transparent = cfg.bg === "transparent" || cfg.bg === "none";
-    const bg = transparent ? "transparent" : cfg.bg;
-    const border = transparent ? "transparent" : shade(cfg.bg, 0.14);
-    const hoverBg = transparent ? "rgba(255,255,255,0.08)" : shade(cfg.bg, 0.08);
-
-    return {
-        type: "row",
-        domId: "chip-root",
-        styles: {
-            width: pct(100),
-            height: pct(100),
-            backgroundColor: bg,
-            borderColor: border,
-            borderType: "solid",
-            borderWidth: px(1),
-            borderRadius: px(m.radius),
-            padding: px(m.padY), // horizontal inset comes from centering slack
-            gap: m.gap,
-            mainAxisAlignment: "center",
-            crossAxisAlignment: "center",
-            overflow: "hidden",
-            cursor: "pointer",
-            hover: { backgroundColor: hoverBg },
-        },
-        children,
-    };
+    return { svg, width, height };
 }
 
-/** The full `component` element ready for `command:scene:add-drawdy-elements`. */
+/** The full native `image` element ready for `command:scene:add-drawdy-elements`. */
 export function buildChipElement(
     cfg: ChipConfig,
     drawdyElementId: string,
     x: number,
     y: number
 ): DrawdyElementSchema {
-    const hasIcon = cfg.iconKind !== "none";
-    const m = chipMetrics(cfg.label, hasIcon, cfg.fontSize ?? 16);
+    const { svg, width, height } = buildChipSvg(cfg);
     return {
-        type: "component",
+        type: "image",
         drawdyElementId,
         x,
         y,
-        width: m.width,
-        height: m.height,
+        width,
+        height,
         meta: {
             [CHIP_FLAG]: true,
             url: cfg.url,
             label: cfg.label,
             iconKind: cfg.iconKind,
             fg: cfg.fg,
-            bg: cfg.bg,
             fontSize: cfg.fontSize ?? 16,
         },
-        schema: chipSchema(cfg),
+        url: svgDataUri(svg),
     };
 }
 
@@ -130,7 +105,6 @@ export function chipConfigFromMeta(
         label: typeof meta.label === "string" ? meta.label : url,
         iconKind: (meta.iconKind as IconKind) ?? "globe",
         fg: typeof meta.fg === "string" ? meta.fg : "#e8b7a0",
-        bg: typeof meta.bg === "string" ? meta.bg : "#1f1a17",
         fontSize: typeof meta.fontSize === "number" ? meta.fontSize : 16,
     };
 }

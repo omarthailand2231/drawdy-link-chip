@@ -82,6 +82,16 @@ export function chipMetrics(
     return { width, height, fontSize, iconSize, padX, padY, gap, radius };
 }
 
+/** Escape text for safe inclusion inside SVG/XML markup. */
+export function escapeXml(s: string): string {
+    return s
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 /** Parse `#rgb`/`#rrggbb` to [r,g,b], or null if it isn't a hex color. */
 function hexToRgb(hex: string): [number, number, number] | null {
     const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
