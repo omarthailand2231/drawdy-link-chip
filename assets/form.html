@@ -181,7 +181,9 @@
 
   function applyStyling(s) {
     if (!s) return; var r = document.documentElement.style;
-    var map = { background: "--bg", surface: "--surface", foreground: "--fg", mutedForeground: "--muted", border: "--border", primary: "--primary", primaryForeground: "--primaryFg", input: "--input", ring: "--ring", radiusMd: "--radius" };
+    // NB: map --input from surface2 (elevated dark surface), NOT styling.input —
+    // that token is a light color and makes the fields look washed-out.
+    var map = { background: "--bg", surface: "--surface", foreground: "--fg", mutedForeground: "--muted", border: "--border", primary: "--primary", primaryForeground: "--primaryFg", surface2: "--input", ring: "--ring", radiusMd: "--radius" };
     Object.keys(map).forEach(function (k) { if (s[k]) r.setProperty(map[k], s[k]); });
   }
 
