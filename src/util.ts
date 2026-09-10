@@ -34,13 +34,27 @@ export function extractUrl(text: string): string | null {
     return null;
 }
 
-/** What we actually open: guarantees a scheme so the browser navigates. */
+/** Schemes we allow a chip to open. Everything else (javascript:, data:,
+ *  vbscript:, file:, …) is rejected — those are XSS / local-file vectors. */
+const SAFE_SCHEME = /^(https?|mailto):$/i;
+
+/** True only if the URL already carries a scheme we permit to open. */
+export function isSafeUrl(url: string): boolean {
+    const m = /^\s*([a-z][a-z0-9+.-]*):/i.exec(url);
+    return !!m && SAFE_SCHEME.test(m[1] + ":");
+}
+
+/**
+ * What we actually open. Guarantees a scheme and REJECTS dangerous ones — a URL
+ * with an explicit non-http(s)/mailto scheme returns "" (so no chip is created
+ * and nothing opens). A bare `host/path` is assumed https.
+ */
 export function normalizeUrl(url: string): string {
     const trimmed = url.trim();
     if (!trimmed) return "";
-    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) return trimmed;
-    if (/^mailto:/i.test(trimmed)) return trimmed;
-    return "https://" + trimmed;
+    const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(trimmed);
+    if (scheme) return SAFE_SCHEME.test(scheme[1] + ":") ? trimmed : "";
+    return "https://" + trimmed; // bare domain → https
 }
 
 /** Best default icon for a URL — GitHub links get the GitHub mark. */

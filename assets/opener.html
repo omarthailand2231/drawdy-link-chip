@@ -63,13 +63,25 @@
     catch (e) { return null; }
   }
 
+  function isSafe(u) { return /^\s*(https?|mailto):/i.test(u); }
+
   function show(msg) {
     current = String(msg.url || "");
     applyStyling(msg.styling);
     $("label").textContent = msg.label || current;
     $("url").textContent = current;
-    $("open").href = current;
     $("status").textContent = "";
+
+    // Defense in depth: never put a non-http(s)/mailto URL in an href or
+    // window.open — javascript:/data:/file: there are XSS / local-file vectors.
+    if (!isSafe(current)) {
+      $("open").removeAttribute("href");
+      $("open").style.opacity = "0.5";
+      $("open").style.pointerEvents = "none";
+      $("status").textContent = "Blocked: unsafe link scheme.";
+      return;
+    }
+    $("open").href = current;
 
     var w = tryOpen();
     if (w) {

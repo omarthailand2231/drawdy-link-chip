@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.3.1
+- **Security:** reject non-http(s)/mailto URL schemes. `javascript:`, `data:`, `vbscript:`, `file:` (incl. bypasses like `javascript://%0a…`) were passed to `window.open`/`href` in the opener — an XSS / local-file vector. Now blocked at creation (`normalizeUrl`) and again in the opener (defense in depth).
+
 ## 0.3.0
 - **Chips are now a plain native `text` element** (was a baked SVG image) — real Drawdy text is a first-class clickable element, so click-to-open works. URL + style live in `meta`.
 - Customizer is now URL, label, and **text color** only (icon removed — a text element can't contain an image, and DDP can't group elements).
