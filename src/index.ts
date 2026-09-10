@@ -21,12 +21,12 @@ import type {
     DriverSubscriptionEvent,
     ModuleStyling,
 } from "@drawdy/driver-protocol";
-import { githubSvg, globeSvg, type IconKind } from "./icons";
+import { githubSvg } from "./icons";
 import {
     buildChipElement,
-    buildChipSvg,
-    CHIP_FLAG,
     chipConfigFromMeta,
+    chipSize,
+    DEFAULT_FONT_SIZE,
     type ChipConfig,
 } from "./chip";
 import { deriveLabel, extractUrl, normalizeUrl } from "./util";
@@ -305,14 +305,9 @@ async function openForm(
         mode,
         editId: editId ?? null,
         styling,
-        iconTemplates: {
-            github: githubSvg("__FG__", 18),
-            globe: globeSvg("__FG__", 18),
-        },
         prefill: {
             url: prefill?.url ?? "",
             label: prefill?.label ?? "",
-            iconKind: prefill?.iconKind ?? defaults?.iconKind ?? "github",
             fg: prefill?.fg ?? defaults?.fg ?? "#e8b7a0",
         },
     };
@@ -331,12 +326,11 @@ async function handleSubmit(msg: any): Promise<void> {
         await hide(FORM_ID);
         return;
     }
-    const iconKind = (msg.iconKind as IconKind) ?? "github";
     const label = String(msg.label ?? "").trim() || deriveLabel(url);
     const fg = String(msg.fg ?? "#e8b7a0");
-    const cfg: ChipConfig = { url, label, iconKind, fg, fontSize: 16 };
+    const cfg: ChipConfig = { url, label, fg, fontSize: DEFAULT_FONT_SIZE };
 
-    void saveDefaults({ iconKind, fg });
+    void saveDefaults({ fg });
 
     let x: number, y: number;
     if (msg.editId) {
@@ -353,7 +347,7 @@ async function handleSubmit(msg: any): Promise<void> {
         });
         chipConfigById.delete(String(msg.editId));
     } else {
-        const { width, height } = buildChipSvg(cfg);
+        const { width, height } = chipSize(cfg);
         const c = await viewportCenter();
         x = c.x - width / 2;
         y = c.y - height / 2;
@@ -504,10 +498,7 @@ async function loadDefaults(): Promise<Partial<ChipConfig> | null> {
     return g ? (g as Partial<ChipConfig>) : null;
 }
 
-async function saveDefaults(d: {
-    iconKind: IconKind;
-    fg: string;
-}): Promise<void> {
+async function saveDefaults(d: { fg: string }): Promise<void> {
     await call({
         type: "command:kv-storage:set",
         driverId,

@@ -66,17 +66,10 @@
     <label>Label <span class="hint">(auto from URL)</span></label>
     <input id="label" type="text" placeholder="owner/repo" autocomplete="off" spellcheck="false" />
 
-    <label>Icon</label>
-    <div class="seg" id="iconseg">
-      <button type="button" data-icon="github">GitHub</button>
-      <button type="button" data-icon="globe">Globe</button>
-      <button type="button" data-icon="none">None</button>
-    </div>
-
-    <label>Text &amp; icon color</label>
+    <label>Text color</label>
     <div class="colors" id="fgcolors"></div>
 
-    <div class="preview"><div class="chip" id="chip"><span id="chipicon"></span><span class="txt" id="chiptxt">owner/repo</span></div></div>
+    <div class="preview"><div class="chip" id="chip"><span class="txt" id="chiptxt">owner/repo</span></div></div>
 
     <div class="actions">
       <button type="button" id="cancel">Cancel</button>
@@ -91,8 +84,7 @@
 
   var FG_SWATCHES = ["#e8b7a0", "#ffffff", "#f3f2f4", "#7ee787", "#79c0ff", "#ff7b72", "#d2a8ff", "#f2cc60"];
 
-  var state = { mode: "create", editId: null, url: "", label: "", labelEdited: false, iconKind: "github", fg: "#e8b7a0" };
-  var tpl = { github: "", globe: "" };
+  var state = { mode: "create", editId: null, url: "", label: "", labelEdited: false, fg: "#e8b7a0" };
 
   function $(id) { return document.getElementById(id); }
 
@@ -102,14 +94,10 @@
     var g = s.replace(/^github\.com\//i, "");
     return g || s;
   }
-  function recolor(svg, color) { return String(svg || "").split("__FG__").join(color); }
-
   function renderPreview() {
-    var txt = $("chiptxt"), icon = $("chipicon");
+    var txt = $("chiptxt");
     txt.style.color = state.fg;
     txt.textContent = state.label || deriveLabel(state.url) || "owner/repo";
-    if (state.iconKind === "none") { icon.innerHTML = ""; icon.style.display = "none"; }
-    else { icon.style.display = "inline-flex"; icon.innerHTML = recolor(tpl[state.iconKind] || "", state.fg); }
   }
 
   function buildSwatches(hostId, list, key) {
@@ -143,29 +131,19 @@
       });
     });
   }
-  function syncIconUI() {
-    Array.prototype.forEach.call(document.querySelectorAll("#iconseg button"), function (b) {
-      b.className = b.getAttribute("data-icon") === state.iconKind ? "on" : "";
-    });
-  }
-
   $("url").addEventListener("input", function (e) {
     state.url = e.target.value;
     if (!state.labelEdited) { var d = deriveLabel(state.url); $("label").value = d; state.label = d; }
     renderPreview();
   });
   $("label").addEventListener("input", function (e) { state.label = e.target.value; state.labelEdited = true; renderPreview(); });
-  $("iconseg").addEventListener("click", function (e) {
-    var b = e.target.closest ? e.target.closest("button") : null; if (!b) return;
-    state.iconKind = b.getAttribute("data-icon"); syncIconUI(); renderPreview();
-  });
   $("cancel").onclick = function () { if (api) api.postMessage({ kind: "cancel" }); };
   $("add").onclick = function () {
     if (!state.url.trim()) { $("url").focus(); return; }
     if (api) api.postMessage({
       kind: "submit", mode: state.mode, editId: state.editId,
       url: state.url, label: state.label || deriveLabel(state.url),
-      iconKind: state.iconKind, fg: state.fg
+      fg: state.fg
     });
   };
   document.addEventListener("keydown", function (e) {
@@ -184,8 +162,6 @@
   function init(msg) {
     state.mode = msg.mode || "create";
     state.editId = msg.editId || null;
-    tpl.github = (msg.iconTemplates && msg.iconTemplates.github) || "";
-    tpl.globe = (msg.iconTemplates && msg.iconTemplates.globe) || "";
     applyStyling(msg.styling);
     var TITLES = { edit: "Edit link chip", linkify: "Make this link a chip", create: "Add link chip" };
     var BTNS = { edit: "Save changes", linkify: "Replace with chip", create: "Add to canvas" };
@@ -193,16 +169,16 @@
     $("add").textContent = BTNS[state.mode] || BTNS.create;
     var p = msg.prefill || {};
     state.url = p.url || ""; state.label = p.label || ""; state.labelEdited = !!p.label;
-    state.iconKind = p.iconKind || "github"; state.fg = p.fg || "#e8b7a0";
+    state.fg = p.fg || "#e8b7a0";
     $("url").value = state.url; $("label").value = state.label || deriveLabel(state.url);
     buildSwatches("fgcolors", FG_SWATCHES, "fg");
-    syncIconUI(); syncColorUI(); renderPreview();
+    syncColorUI(); renderPreview();
     setTimeout(function () { try { $("url").focus(); } catch (e) {} }, 30);
   }
 
   // default render so the form is usable even before init arrives
   buildSwatches("fgcolors", FG_SWATCHES, "fg");
-  syncIconUI(); syncColorUI(); renderPreview();
+  syncColorUI(); renderPreview();
 
   if (api) {
     api.onMessage(function (msg) { if (msg && msg.kind === "init") init(msg); });

@@ -13,7 +13,7 @@ generic globe) + a clean label (`https://github.com/gastownhall/beads` shows as
 - With a **chip selected** → edit it.
 - With **nothing selected** → add a new chip from scratch.
 
-The customizer offers: URL, auto-derived label, icon (GitHub mark / globe / none), and **text & icon color**, with a live preview.
+The customizer offers: URL, auto-derived label, and **text color**, with a live preview.
 
 Also on **right-click → Link chip**: Add / Edit selected / Open selected.
 
@@ -21,10 +21,13 @@ Also on **right-click → Link chip**: Add / Edit selected / Open selected.
 
 ## What a chip is
 
-A chip is a **single native `image` element** — the logo and the label are baked
-into one SVG (`src/chip.ts`). So it **renders for everyone**, with or without the
-extension installed, and it's one element (nothing to group). The URL + style live
-in the element's `meta`, which is how the extension recognizes a chip and opens it.
+A chip is a **plain native `text` element** — real Drawdy text, so it's a
+first-class element you can click. The full URL + style live in the element's
+`meta`, which is how the extension recognizes a chip and opens it on click.
+
+No baked-in logo: a `text` element can't contain an image, and DDP has no way to
+group two elements — so the chip is text you style with a color. (A separate logo
+`image` beside it is possible, but it wouldn't be one clickable unit.)
 
 Each chip stores its URL + style in the element's `meta`, so it's self-describing — the extension reads a click target's meta to know where it points; nothing to keep in sync, and chips survive reloads.
 
