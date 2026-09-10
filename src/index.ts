@@ -24,11 +24,12 @@ import type {
 import { githubSvg, globeSvg, type IconKind } from "./icons";
 import {
     buildChipElement,
+    buildChipSvg,
     CHIP_FLAG,
     chipConfigFromMeta,
     type ChipConfig,
 } from "./chip";
-import { chipMetrics, deriveLabel, extractUrl, normalizeUrl } from "./util";
+import { deriveLabel, extractUrl, normalizeUrl } from "./util";
 import { FORM_HTML } from "./form-html";
 import { OPENER_HTML } from "./opener-html";
 
@@ -313,7 +314,6 @@ async function openForm(
             label: prefill?.label ?? "",
             iconKind: prefill?.iconKind ?? defaults?.iconKind ?? "github",
             fg: prefill?.fg ?? defaults?.fg ?? "#e8b7a0",
-            bg: prefill?.bg ?? defaults?.bg ?? "#1f1a17",
         },
     };
     await call({
@@ -334,10 +334,9 @@ async function handleSubmit(msg: any): Promise<void> {
     const iconKind = (msg.iconKind as IconKind) ?? "github";
     const label = String(msg.label ?? "").trim() || deriveLabel(url);
     const fg = String(msg.fg ?? "#e8b7a0");
-    const bg = String(msg.bg ?? "#1f1a17");
-    const cfg: ChipConfig = { url, label, iconKind, fg, bg, fontSize: 16 };
+    const cfg: ChipConfig = { url, label, iconKind, fg, fontSize: 16 };
 
-    void saveDefaults({ iconKind, fg, bg });
+    void saveDefaults({ iconKind, fg });
 
     let x: number, y: number;
     if (msg.editId) {
@@ -354,10 +353,10 @@ async function handleSubmit(msg: any): Promise<void> {
         });
         chipConfigById.delete(String(msg.editId));
     } else {
-        const m = chipMetrics(label, iconKind !== "none", 16);
+        const { width, height } = buildChipSvg(cfg);
         const c = await viewportCenter();
-        x = c.x - m.width / 2;
-        y = c.y - m.height / 2;
+        x = c.x - width / 2;
+        y = c.y - height / 2;
     }
 
     const id = generateId();
@@ -508,7 +507,6 @@ async function loadDefaults(): Promise<Partial<ChipConfig> | null> {
 async function saveDefaults(d: {
     iconKind: IconKind;
     fg: string;
-    bg: string;
 }): Promise<void> {
     await call({
         type: "command:kv-storage:set",

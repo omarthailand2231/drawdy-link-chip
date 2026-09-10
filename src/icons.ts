@@ -32,3 +32,23 @@ export function iconSvg(kind: IconKind, color: string, size = 18): string | null
     if (kind === "globe") return globeSvg(color, size);
     return null;
 }
+
+/**
+ * A nested <svg> positioned at (x,y) for embedding inside a parent SVG (the
+ * composite logo+text chip). Empty string for `none`.
+ */
+export function iconNested(
+    kind: IconKind,
+    color: string,
+    x: number,
+    y: number,
+    size: number
+): string {
+    if (kind === "github") {
+        return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 -0.5 25 25" fill="${color}"><path d="${GITHUB_PATH}"/></svg>`;
+    }
+    if (kind === "globe") {
+        return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3.5 3 3.5 15 0 18c-3.5-3-3.5-15 0-18Z"/></svg>`;
+    }
+    return "";
+}

@@ -13,11 +13,18 @@ generic globe) + a clean label (`https://github.com/gastownhall/beads` shows as
 - With a **chip selected** → edit it.
 - With **nothing selected** → add a new chip from scratch.
 
-The customizer offers: URL, auto-derived label, icon (GitHub mark / globe / none), **icon+text color**, **background color** — including a **transparent** variant — with a live preview.
+The customizer offers: URL, auto-derived label, icon (GitHub mark / globe / none), and **text & icon color**, with a live preview.
 
 Also on **right-click → Link chip**: Add / Edit selected / Open selected.
 
-**Clicking a chip** opens its URL in a new tab.
+**Clicking a chip** opens its URL in a new tab; **shift+click** opens it directly.
+
+## What a chip is
+
+A chip is a **single native `image` element** — the logo and the label are baked
+into one SVG (`src/chip.ts`). So it **renders for everyone**, with or without the
+extension installed, and it's one element (nothing to group). The URL + style live
+in the element's `meta`, which is how the extension recognizes a chip and opens it.
 
 Each chip stores its URL + style in the element's `meta`, so it's self-describing — the extension reads a click target's meta to know where it points; nothing to keep in sync, and chips survive reloads.
 
@@ -51,11 +58,16 @@ src/opener-html.ts   ┘ (runs automatically on predev/prebuild)
 
 > Editing `assets/*.html` mid-`dev`: run `npm run gen` (or restart `dev`) to re-bake them into the bundle.
 
-## Known caveat — opening the tab
+## Known limitations
 
-Drivers run in a sandboxed worker with no way to open an external URL directly, so
-opening goes through a tiny **opener webview** that calls `window.open`. Browsers
-may block a popup that isn't tied to a click *inside that frame*, so the opener
-also shows an **Open in new tab** button (always works) and a **Copy URL** fallback.
-If your setup blocks the auto-open, that button is the one-tap path. (This is the
-one behavior that can't be verified outside a running Drawdy — see how it lands.)
+**Opening without the extension.** Drawdy's protocol exposes no native element
+hyperlink (and no grouping), so a driver can't make a chip natively clickable.
+A chip *renders* for everyone, but only viewers **with the extension** can click it
+to open. There's no way around this until DDP adds a link property.
+
+**Opening the tab.** Even with the extension, a sandboxed driver can't open a URL
+directly, so opening goes through a tiny **opener webview** that calls
+`window.open`. Browsers may block a popup that isn't tied to a click *inside that
+frame*, so the opener also shows an **Open in new tab** button (always works) and a
+**Copy URL** fallback. **Shift+click** attempts a silent direct open and only shows
+the card if blocked.

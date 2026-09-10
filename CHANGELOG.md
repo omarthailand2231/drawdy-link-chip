@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0
+- **Chips are now a single native `image` element** (logo + label baked into one SVG) instead of a driver-rendered `component` — so they render for everyone, with or without the extension, and are one element (no grouping).
+- Fixed on-canvas icon not rendering (SVG must be a data URI, not a raw string).
+- Customizer simplified to **text & icon color only** (background/transparent removed).
+- Honest limitation documented: DDP has no native hyperlink, so non-extension viewers can see a chip but can't click-open it.
+
 ## 0.1.0
 - Clickable link-chip stickers on the canvas (component elements): logo + clean label.
 - GitHub action button: turn a selected link-text into a chip.
