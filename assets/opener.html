@@ -54,7 +54,7 @@
 
   function applyStyling(s) {
     if (!s) return; var r = document.documentElement.style;
-    var map = { surface: "--surface", foreground: "--fg", mutedForeground: "--muted", border: "--border", primary: "--primary", primaryForeground: "--primaryFg", input: "--input" };
+    var map = { surface: "--surface", foreground: "--fg", mutedForeground: "--muted", border: "--border", primary: "--primary", primaryForeground: "--primaryFg", surface2: "--input" };
     Object.keys(map).forEach(function (k) { if (s[k]) r.setProperty(map[k], s[k]); });
   }
 
